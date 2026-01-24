@@ -7,7 +7,11 @@ readme = "README.md"
 requires-python = "~=3.13.0"
 dependencies = [
     "btrfsutil>=6.17.1",
+    "mount>=1.0.0",
 ]
+
+[project.scripts]
+btr-backup = "btr_backup:main"
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I"]
