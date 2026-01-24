@@ -1,0 +1,13 @@
+[project]
+name = "btr-backup"
+version = "0.1.0"
+description = "Utility for backing up Btrfs subvolumes."
+license-files = ["LICENSE"]
+readme = "README.md"
+requires-python = "~=3.13.0"
+dependencies = [
+    "btrfsutil>=6.17.1",
+]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
