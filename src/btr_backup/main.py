@@ -3,10 +3,17 @@ from collections.abc import Iterator, Sequence
 from contextlib import ExitStack, contextmanager
 from os import PathLike, fspath
 from pathlib import Path
+from sys import exit
 from tempfile import TemporaryDirectory
 
 from mount import mount, umount
 
+from btr_backup.commands import (
+    add_check_command,
+    add_list_command,
+    add_remove_command,
+    add_snapshot_command,
+)
 from btr_backup.log import logger, setup_logger
 
 
@@ -16,8 +23,8 @@ def block_device(arg: str) -> Path:
     if not path.exists():
         raise ArgumentTypeError(f"{path} does not exist.")
 
-    if not path.is_block_device():
-        raise ArgumentTypeError(f"{path} is not a block device.")
+    # if not path.is_block_device():
+    #     raise ArgumentTypeError(f"{path} is not a block device.")
 
     return path
 
@@ -47,57 +54,12 @@ def parse_args(args: Sequence[str] | None = None) -> Namespace:
 
     subparsers = parser.add_subparsers(required=True)
 
-    check_parser = subparsers.add_parser(
-        "check",
-        help="Check subvolumes structure.",
-    )
-    check_parser.set_defaults(func=check_structure)
-
-    list_parser = subparsers.add_parser(
-        "list",
-        help="List available subvolumes.",
-    )
-    list_parser.set_defaults(func=list_subvolumes)
-
-    snapshot_parser = subparsers.add_parser(
-        "snapshot",
-        help="Snapshot subvolumes.",
-    )
-    snapshot_parser.set_defaults(func=snapshot_subvolumes)
-
-    remove_parser = subparsers.add_parser(
-        "remove",
-        help="Remove selected subvolumes.",
-    )
-    remove_parser.set_defaults(func=remove_subvolumes)
-
-    move_parser = subparsers.add_parser(
-        "move",
-        help="Move subvolumes to another filesystem.",
-    )
-    move_parser.set_defaults(func=move_subvolumes)
+    add_check_command(subparsers)
+    add_list_command(subparsers)
+    add_remove_command(subparsers)
+    add_snapshot_command(subparsers)
 
     return parser.parse_args(args)
-
-
-def check_structure(working_dir: Path, args: Namespace) -> None:
-    pass
-
-
-def list_subvolumes(working_dir: Path, args: Namespace) -> None:
-    pass
-
-
-def snapshot_subvolumes(working_dir: Path, args: Namespace) -> None:
-    pass
-
-
-def remove_subvolumes(working_dir: Path, args: Namespace) -> None:
-    pass
-
-
-def move_subvolumes(working_dir: Path, args: Namespace) -> None:
-    pass
 
 
 @contextmanager
@@ -129,4 +91,5 @@ def main() -> None:
             )
             return
 
-        args.func(mount_point / args.chdir, args)
+        if not args.func(mount_point / args.chdir, **vars(args)):
+            exit(1)
