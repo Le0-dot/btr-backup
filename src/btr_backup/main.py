@@ -8,12 +8,7 @@ from tempfile import TemporaryDirectory
 
 from mount import mount, umount
 
-from btr_backup.commands import (
-    add_check_command,
-    add_list_command,
-    add_remove_command,
-    add_snapshot_command,
-)
+from btr_backup.commands import add_commands
 from btr_backup.log import logger, setup_logger
 
 
@@ -53,11 +48,7 @@ def parse_args(args: Sequence[str] | None = None) -> Namespace:
     )
 
     subparsers = parser.add_subparsers(required=True)
-
-    add_check_command(subparsers)
-    add_list_command(subparsers)
-    add_remove_command(subparsers)
-    add_snapshot_command(subparsers)
+    add_commands(subparsers)
 
     return parser.parse_args(args)
 
