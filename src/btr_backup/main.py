@@ -1,4 +1,3 @@
-import logging
 from argparse import ArgumentParser, ArgumentTypeError, Namespace
 from collections.abc import Iterator, Sequence
 from contextlib import ExitStack, contextmanager
@@ -8,7 +7,7 @@ from tempfile import TemporaryDirectory
 
 from mount import mount, umount
 
-logging.basicConfig(format="[%(levelname)s] %(message)s")
+from btr_backup.log import logger, setup_logger
 
 
 def block_device(arg: str) -> Path:
@@ -113,8 +112,7 @@ def mount_context(device: PathLike, destination: PathLike, fs: str) -> Iterator[
 def main() -> None:
     args = parse_args()
 
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.WARNING - (10 * min(args.verbose, 2)))
+    setup_logger(logger, verbosity=args.verbose)
 
     logger.debug("Parsed arguments: %s", args)
 
