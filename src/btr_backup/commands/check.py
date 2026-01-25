@@ -24,24 +24,29 @@ def check_subvolume_name(subvolume: Path) -> bool:
 
 
 def check_structure(working_dir: Path, **kwargs: Any) -> bool:
+    logger.debug(f"Verifying {working_dir} existence")
     if not working_dir.exists():
         logger.error(f"Path {working_dir} does not exist.")
         return False
 
+    logger.debug(f"Verifying {working_dir} is a directory")
     if not working_dir.is_dir():
         logger.error(f"Path {working_dir} is not a directory.")
         return False
 
     for logic_dir in working_dir.iterdir():
+        logger.debug(f"Verifying {logic_dir} is a directory")
         if not logic_dir.is_dir():
             logger.error(f"Path {logic_dir} is not a directory.")
             return False
 
+        logger.debug(f"Verifying contents of {logic_dir} are subvolumes")
         if extra := list(filterfalse(is_subvolume, logic_dir.iterdir())):
             extra_str = ", ".join(str(p) for p in extra)
             logger.error(f"Only subvolumes allowed in {logic_dir}: {extra_str}")
             return False
 
+        logger.debug(f"Verifying contents of {logic_dir} are named correctly")
         if invalid := list(filterfalse(check_subvolume_name, logic_dir.iterdir())):
             invalid_str = ", ".join(str(p) for p in invalid)
             logger.error(f"Invalid subvolume names in {logic_dir}: {invalid_str}")
