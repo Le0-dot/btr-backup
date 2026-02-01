@@ -23,7 +23,7 @@ def snapshot_subvolumes(working_dir: Path, logical_dir: str, **kwargs: Any) -> N
         logger.error("Some active subvolumes are missing.")
         return
 
-    snapshot_name = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
+    snapshot_name = datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S%:z")
 
     snapshots = [directory / snapshot_name for directory in direcotries]
 
