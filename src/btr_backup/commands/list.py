@@ -20,12 +20,13 @@ def list_subvolumes(
     for logic_dir in working_dir.glob(logical_dir):
         logger.debug(f"Found logical directory: {logic_dir}")
 
-        subvolumes = [
-            subvol.name for subvol in logic_dir.iterdir() if subvol.name != "active"
-        ]
+        subvolumes = sorted(
+            [subvol.name for subvol in logic_dir.iterdir() if subvol.name != "active"],
+            reverse=True,
+        )
         logger.debug(f"Found subvolumes: {', '.join(subvolumes)}")
 
-        logical_volumes[logic_dir.name] = sorted(subvolumes, reverse=True)
+        logical_volumes[logic_dir.name] = subvolumes
 
     if not logical_volumes:
         logger.error("No logical directories found.")

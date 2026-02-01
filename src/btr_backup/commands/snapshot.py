@@ -8,7 +8,12 @@ from btr_backup.log import logger
 from btr_backup.protocols import Subparsers
 
 
-def snapshot_subvolumes(working_dir: Path, logical_dir: str, **kwargs: Any) -> None:
+def snapshot_subvolumes(
+    working_dir: Path,
+    *,
+    logical_dir: str,
+    **kwargs: Any,
+) -> None:
     logger.debug("Listing subvolumes in %s", working_dir)
 
     direcotries = list(working_dir.glob(logical_dir))

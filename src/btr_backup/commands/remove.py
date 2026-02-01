@@ -9,6 +9,7 @@ from btr_backup.protocols import Subparsers
 
 def remove_subvolumes(
     working_dir: Path,
+    *,
     logical_dir: str,
     dry_run: bool,
     keep_latest: int,
