@@ -11,7 +11,7 @@ def list_subvolumes(
     *,
     logical_dir: str,
     count: bool,
-    all: bool,
+    show: bool,
     **kwargs: Any,
 ) -> None:
     logger.debug("Listing subvolumes in %s", working_dir)
@@ -33,12 +33,9 @@ def list_subvolumes(
 
     for logic_dir, subvolumes in logical_volumes.items():
         print(f"{logic_dir}", end="\t")
+        print(len(subvolumes) if count else "")
 
-        if count:
-            print("total:", len(subvolumes))
-
-        subvolumes_to_show = subvolumes if all else subvolumes[:1]
-        for subvol in subvolumes_to_show:
+        for subvol in subvolumes if show else []:
             print(f"\t{subvol}")
 
 
@@ -58,14 +55,14 @@ def add_command(subparsers: Subparsers) -> None:
     parser.add_argument(
         "--count",
         action=BooleanOptionalAction,
-        default=False,
+        default=True,
         help="Count snapshots.",
     )
     parser.add_argument(
-        "--all",
+        "--show",
         action=BooleanOptionalAction,
         default=False,
-        help="Show all snapshots.",
+        help="Show snapshots.",
     )
 
     parser.set_defaults(func=list_subvolumes)
