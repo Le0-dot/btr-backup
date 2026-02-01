@@ -14,7 +14,7 @@ def snapshot_subvolumes(working_dir: Path, logical_dir: str, **kwargs: Any) -> N
     direcotries = list(working_dir.glob(logical_dir))
 
     if not direcotries:
-        logger.error("No active subvolumes found.")
+        logger.error("No specified directories found.")
         return
 
     active = [directory / "active" for directory in direcotries]
