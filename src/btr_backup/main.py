@@ -82,5 +82,13 @@ def main() -> None:
             )
             return
 
-        if not args.func(mount_point / args.chdir, **vars(args)):
+        working_dir = mount_point / args.chdir
+        if not working_dir.exists():
+            logger.error(
+                "The specified working directory %s does not exist on the mounted device.",
+                args.chdir,
+            )
+            return
+
+        if not args.func(working_dir, **vars(args)):
             exit(1)
