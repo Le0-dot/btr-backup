@@ -1,7 +1,7 @@
-from collections.abc import Generator
+from collections.abc import Iterator
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from btr_backup.log import logger
 from btr_backup.protocols import Subparsers
@@ -12,14 +12,60 @@ class GraphElement(StrEnum):
     whitespace = " "
     trunk = "┃"
     fork_right = "┣━━"
-    trun_down = "━━┓"
-    trun_right = "┗━━"
+    turn_down = "━━┓"
+    turn_right = "┗━━"
 
 
-def generate_graph(logical_dirs: dict[str, list[str]]) -> Generator[str, None, None]:
+def generate_with_last[T, U](
+    values: list[T],
+    producer: Callable[[T], Iterator[U]],
+    last_producer: Callable[[T], Iterator[U]],
+) -> Iterator[U]:
+    for value in values[:-1]:
+        yield from producer(value)
+    yield from last_producer(values[-1])
+
+
+def generate_subvolume_graph(
+    subvolumes: list[str],
+    padding: int,
+    last: bool = False,
+) -> Iterator[str]:
+    def generator(subvolume: str) -> Iterator[str]:
+        yield GraphElement.trunk if not last else GraphElement.whitespace
+        yield GraphElement.whitespace * padding
+        yield GraphElement.fork_right
+        yield GraphElement.whitespace
+        yield subvolume
+        yield GraphElement.newline
+
+    def last_generator(subvolume: str) -> Iterator[str]:
+        yield GraphElement.trunk if not last else GraphElement.whitespace
+        yield GraphElement.whitespace * padding
+        yield GraphElement.turn_right
+        yield GraphElement.whitespace
+        yield subvolume
+        yield GraphElement.newline
+
+    yield from generate_with_last(subvolumes, generator, last_generator)
+
+
+def generate_graph(logical_dirs: dict[str, list[str]]) -> Iterator[str]:
     items = list(logical_dirs.items())
 
-    for logic_dir, subvolumes in items[:-1]:
+    def generator(item: tuple[str, list[str]]) -> Iterator[str]:
+        logic_dir, subvolumes = item
+
+        padding = (
+            len(GraphElement.fork_right)
+            + len(GraphElement.whitespace)
+            + len(logic_dir)
+            + len(GraphElement.whitespace)
+            + len(GraphElement.turn_down)
+            - 1  # trunk
+            - 1  # start at the same column
+        )
+
         yield GraphElement.trunk
         yield GraphElement.newline
 
@@ -27,69 +73,41 @@ def generate_graph(logical_dirs: dict[str, list[str]]) -> Generator[str, None, N
         yield GraphElement.whitespace
         yield logic_dir
         yield GraphElement.whitespace
-        yield GraphElement.trun_down
+        yield GraphElement.turn_down
         yield GraphElement.newline
 
-        padding_len = (
+        yield from generate_subvolume_graph(subvolumes, padding)
+
+    def last_generator(item: tuple[str, list[str]]) -> Iterator[str]:
+        logic_dir, subvolumes = item
+
+        padding = (
             len(GraphElement.fork_right)
             + len(GraphElement.whitespace)
             + len(logic_dir)
             + len(GraphElement.whitespace)
-            + len(GraphElement.trun_down)
-            - 1  # trunk
+            + len(GraphElement.turn_down)
+            - 1  # no trunk
             - 1  # start at the same column
         )
-        for subvolume in subvolumes[:-1]:
-            yield GraphElement.trunk
-            yield GraphElement.whitespace * padding_len
-            yield GraphElement.fork_right
-            yield GraphElement.whitespace
-            yield subvolume
-            yield GraphElement.newline
 
         yield GraphElement.trunk
-        yield GraphElement.whitespace * padding_len
-        yield GraphElement.trun_right
-        yield GraphElement.whitespace
-        yield subvolumes[-1]
         yield GraphElement.newline
 
-    logic_dir, subvolumes = items[-1]
-
-    yield GraphElement.trunk
-    yield GraphElement.newline
-
-    yield GraphElement.trun_right
-    yield GraphElement.whitespace
-    yield logic_dir
-    yield GraphElement.whitespace
-    yield GraphElement.trun_down
-    yield GraphElement.newline
-
-    padding_len = (
-        len(GraphElement.fork_right)
-        + len(GraphElement.whitespace)
-        + len(logic_dir)
-        + len(GraphElement.whitespace)
-        + len(GraphElement.trun_down)
-        - 1  # start at the same column
-    )
-    for subvolume in subvolumes[:-1]:
-        yield GraphElement.whitespace * padding_len
-        yield GraphElement.fork_right
+        yield GraphElement.turn_right
         yield GraphElement.whitespace
-        yield subvolume
+        yield logic_dir
+        yield GraphElement.whitespace
+        yield GraphElement.turn_down
         yield GraphElement.newline
 
-    yield GraphElement.whitespace * padding_len
-    yield GraphElement.trun_right
-    yield GraphElement.whitespace
-    yield subvolumes[-1]
-    yield GraphElement.newline
+        yield from generate_subvolume_graph(subvolumes, padding, last=True)
+
+    yield from generate_with_last(items, generator, last_generator)
 
 
 def graph_subvolumes(working_dir: Path, **kwargs: Any) -> None:
-    logger.debug(f"Listing subvolumes in {working_dir}")
+    logger.debug(f"Graphing subvolumes in {working_dir}")
 
     logical_volumes: dict[str, list[str]] = {}
     for logic_dir in working_dir.iterdir():
