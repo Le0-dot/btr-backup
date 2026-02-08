@@ -2,6 +2,7 @@ from argparse import BooleanOptionalAction
 from pathlib import Path
 from typing import Any
 
+from btr_backup.common import snapshots
 from btr_backup.log import logger
 from btr_backup.protocols import Subparsers
 
@@ -20,10 +21,7 @@ def list_subvolumes(
     for logic_dir in working_dir.glob(logical_dir):
         logger.debug(f"Found logical directory: {logic_dir}")
 
-        subvolumes = sorted(
-            [subvol.name for subvol in logic_dir.iterdir() if subvol.name != "active"],
-            reverse=True,
-        )
+        subvolumes = snapshots(logic_dir)
         logger.debug(f"Found subvolumes: {', '.join(subvolumes)}")
 
         logical_volumes[logic_dir.name] = subvolumes

@@ -1,27 +1,13 @@
-from argparse import ArgumentParser, ArgumentTypeError, Namespace
-from collections.abc import Iterator, Sequence
-from contextlib import ExitStack, contextmanager
-from os import PathLike, fspath
+from argparse import ArgumentParser, Namespace
+from collections.abc import Sequence
+from contextlib import ExitStack
 from pathlib import Path
 from sys import exit
 from tempfile import TemporaryDirectory
 
-from mount import mount, umount
-
 from btr_backup.commands import add_commands
+from btr_backup.common import block_device, mount_context
 from btr_backup.log import logger, setup_logger
-
-
-def block_device(arg: str) -> Path:
-    path = Path(arg)
-
-    if not path.exists():
-        raise ArgumentTypeError(f"{path} does not exist.")
-
-    # if not path.is_block_device():
-    #     raise ArgumentTypeError(f"{path} is not a block device.")
-
-    return path
 
 
 def parse_args(args: Sequence[str] | None = None) -> Namespace:
@@ -51,15 +37,6 @@ def parse_args(args: Sequence[str] | None = None) -> Namespace:
     add_commands(subparsers)
 
     return parser.parse_args(args)
-
-
-@contextmanager
-def mount_context(device: PathLike, destination: PathLike, fs: str) -> Iterator[Path]:
-    mount(fspath(device), fspath(destination), fs)
-    try:
-        yield Path(destination)
-    finally:
-        umount(fspath(destination))
 
 
 def main() -> None:
