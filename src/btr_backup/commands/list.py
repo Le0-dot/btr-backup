@@ -1,4 +1,5 @@
 from argparse import BooleanOptionalAction
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -17,8 +18,8 @@ def list_subvolumes(
 ) -> None:
     logger.debug("Listing subvolumes in %s", working_dir)
 
-    logical_volumes: dict[str, list[str]] = {}
-    for logic_dir in working_dir.glob(logical_dir):
+    logical_volumes: OrderedDict[str, list[str]] = OrderedDict()
+    for logic_dir in sorted(working_dir.glob(logical_dir)):
         logger.debug(f"Found logical directory: {logic_dir}")
 
         subvolumes = snapshots(logic_dir)
