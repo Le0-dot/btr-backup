@@ -15,7 +15,7 @@ def list_subvolumes(
     count: bool,
     show: bool,
     **kwargs: Any,
-) -> None:
+) -> bool:
     logger.debug("Listing subvolumes in %s", working_dir)
 
     logical_volumes: OrderedDict[str, list[str]] = OrderedDict()
@@ -29,7 +29,7 @@ def list_subvolumes(
 
     if not logical_volumes:
         logger.error("No logical directories found.")
-        return
+        return False
 
     for logic_dir, subvolumes in logical_volumes.items():
         print(f"{logic_dir}", end="\t")
@@ -37,6 +37,8 @@ def list_subvolumes(
 
         for subvol in subvolumes if show else []:
             print(f"\t{subvol}")
+
+    return True
 
 
 def add_command(subparsers: Subparsers) -> None:

@@ -106,7 +106,7 @@ def generate_graph(logical_dirs: dict[str, list[str]]) -> Iterator[str]:
     yield from generate_with_last(items, generator, last_generator)
 
 
-def graph_subvolumes(working_dir: Path, **kwargs: Any) -> None:
+def graph_subvolumes(working_dir: Path, **kwargs: Any) -> bool:
     logger.debug(f"Graphing subvolumes in {working_dir}")
 
     logical_volumes: dict[str, list[str]] = {}
@@ -119,6 +119,8 @@ def graph_subvolumes(working_dir: Path, **kwargs: Any) -> None:
         logical_volumes[logic_dir.name] = sorted(subvolumes, reverse=True)
 
     print("".join(generate_graph(logical_volumes)))
+
+    return True
 
 
 def add_command(subparsers: Subparsers) -> None:

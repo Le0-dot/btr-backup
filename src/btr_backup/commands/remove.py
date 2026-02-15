@@ -14,14 +14,14 @@ def remove_subvolumes(
     dry_run: bool,
     keep_latest: int,
     **kwargs: Any,
-) -> None:
+) -> bool:
     logger.debug("Looking up subvolumes in %s", working_dir)
 
     directories = list(working_dir.glob(logical_dir))
 
     if not directories:
         logger.error("No specified directories found.")
-        return
+        return False
 
     for directory in directories:
         subvolumes = sorted(
@@ -35,6 +35,8 @@ def remove_subvolumes(
 
             if not dry_run:
                 delete_subvolume(subvol)
+
+    return True
 
 
 def add_command(subparsers: Subparsers) -> None:

@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from btrfsutil import create_snapshot
+from btrfsutil import create_snapshot, is_subvolume
 
 from btr_backup.log import logger
 from btr_backup.protocols import Subparsers
@@ -13,20 +13,20 @@ def snapshot_subvolumes(
     *,
     logical_dir: str,
     **kwargs: Any,
-) -> None:
+) -> bool:
     logger.debug("Listing subvolumes in %s", working_dir)
 
     direcotries = list(working_dir.glob(logical_dir))
 
     if not direcotries:
         logger.error("No specified directories found.")
-        return
+        return False
 
     active = [directory / "active" for directory in direcotries]
 
-    if not all(path.is_dir() for path in active):
+    if not all(is_subvolume(path) for path in active):
         logger.error("Some active subvolumes are missing.")
-        return
+        return False
 
     snapshot_name = datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S%:z")
 
@@ -34,11 +34,13 @@ def snapshot_subvolumes(
 
     if not all(not path.exists() for path in snapshots):
         logger.error("Some snapshots already exist.")
-        return
+        return False
 
     for src, dst in zip(active, snapshots):
         logger.debug("Creating snapshot from %s to %s", src, dst)
         create_snapshot(src, dst, read_only=True)
+
+    return True
 
 
 def add_command(subparsers: Subparsers) -> None:
