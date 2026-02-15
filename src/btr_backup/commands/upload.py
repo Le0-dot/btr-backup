@@ -32,6 +32,44 @@ def last_snapshot(dir: Path) -> Path | None:
     return dir / subvols[0] if subvols else None
 
 
+def upload_logical_directory(source: Path, destination: Path) -> bool:
+    logger.debug("Processing logical directory: %s", source)
+
+    snapshot = last_snapshot(source)
+    if not snapshot:
+        logger.warning("No snapshots found in %s, skipping.", source)
+        return True
+
+    destination.mkdir(exist_ok=True)
+
+    parent = last_snapshot(destination)
+    if parent and parent.stem == snapshot.stem:
+        logger.warning(
+            "Snapshot %s already exists in destination, skipping.",
+            snapshot.stem,
+        )
+        return True
+
+    with TemporaryFile(prefix="btr-backup-") as buffer:
+        if not btrfs_send(snapshot, parent, buffer):
+            logger.error(
+                "Failed to send snapshot %s to temporary file.",
+                snapshot.stem,
+            )
+            return False
+
+        buffer.seek(0)
+
+        if not btrfs_receive(destination, buffer):
+            logger.error(
+                "Failed to receive snapshot from temporary file to %s.",
+                destination,
+            )
+            return False
+
+    return True
+
+
 def upload_snapshot(
     working_dir: Path,
     *,
@@ -46,7 +84,6 @@ def upload_snapshot(
 
     with ExitStack() as stack:
         temp_dir = stack.enter_context(TemporaryDirectory(prefix="btr-backup-"))
-        temp_file = stack.enter_context(TemporaryFile(prefix="btr-backup-"))
 
         try:
             mount_point = stack.enter_context(
@@ -66,42 +103,10 @@ def upload_snapshot(
             )
             return False
 
-        for logic_dir in working_dir.glob(logical_dir):
-            logger.debug("Processing logical directory: %s", logic_dir)
-
-            snapshot = last_snapshot(logic_dir)
-            if not snapshot:
-                logger.warning("No snapshots found in %s, skipping.", logic_dir)
-                continue
-
-            dest_logic_dir = dest_working_dir / logic_dir.name
-            dest_logic_dir.mkdir(parents=True, exist_ok=True)
-
-            parent = last_snapshot(dest_logic_dir)
-            if parent and parent.stem == snapshot.stem:
-                logger.warning(
-                    "Snapshot %s already exists in destination, skipping.",
-                    snapshot.stem,
-                )
-                continue
-
-            if not btrfs_send(snapshot, parent, temp_file):
-                logger.error(
-                    "Failed to send snapshot %s to temporary file.",
-                    snapshot.stem,
-                )
-                return False
-
-            temp_file.seek(0)
-
-            if not btrfs_receive(dest_logic_dir, temp_file):
-                logger.error(
-                    "Failed to receive snapshot from temporary file to %s.",
-                    dest_logic_dir,
-                )
-                return False
-
-    return True
+        return all(
+            upload_logical_directory(logic_dir, dest_working_dir / logic_dir.stem)
+            for logic_dir in working_dir.glob(logical_dir)
+        )
 
 
 def add_command(subparsers: Subparsers) -> None:
