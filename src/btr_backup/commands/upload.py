@@ -14,7 +14,7 @@ def btrfs_progs_available() -> bool:
     return run(command, stdout=DEVNULL, stderr=DEVNULL).returncode == 0
 
 
-def btrfs_send(parent: Path | None, subvol: Path, stdout: IO[bytes]) -> bool:
+def btrfs_send(subvol: Path, parent: Path | None, stdout: IO[bytes]) -> bool:
     command = ["btrfs", "send", str(subvol)]
     if parent:
         command.extend(["-p", str(parent)])
@@ -36,7 +36,7 @@ def upload_snapshot(
     working_dir: Path,
     *,
     logical_dir: str,
-    dest: Path,
+    dest_dev: Path,
     dest_chdir: Path,
     **kwargs: Any,
 ) -> bool:
@@ -49,10 +49,12 @@ def upload_snapshot(
         temp_file = stack.enter_context(TemporaryFile(prefix="btr-backup-"))
 
         try:
-            mount_point = stack.enter_context(mount_context(dest, temp_dir, "btrfs"))
+            mount_point = stack.enter_context(
+                mount_context(dest_dev, temp_dir, "btrfs")
+            )
         except OSError as e:
             logger.error(
-                "Failed to mount %s device to %s: %s", dest, temp_dir, e.strerror
+                "Failed to mount %s device to %s: %s", dest_dev, temp_dir, e.strerror
             )
             return False
 
@@ -76,8 +78,18 @@ def upload_snapshot(
             dest_logic_dir.mkdir(parents=True, exist_ok=True)
 
             parent = last_snapshot(dest_logic_dir)
-            if not btrfs_send(parent, snapshot, temp_file):
-                logger.error("Failed to send snapshot %s to temporary file.", snapshot)
+            if parent and parent.stem == snapshot.stem:
+                logger.warning(
+                    "Snapshot %s already exists in destination, skipping.",
+                    snapshot.stem,
+                )
+                continue
+
+            if not btrfs_send(snapshot, parent, temp_file):
+                logger.error(
+                    "Failed to send snapshot %s to temporary file.",
+                    snapshot.stem,
+                )
                 return False
 
             temp_file.seek(0)
@@ -106,7 +118,7 @@ def add_command(subparsers: Subparsers) -> None:
         help="Logical directory to copy.",
     )
     parser.add_argument(
-        "--dest",
+        "--dest-dev",
         type=block_device,
         required=True,
         help="Destination block device to copy snapshots to.",
