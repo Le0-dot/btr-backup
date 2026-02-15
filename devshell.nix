@@ -2,7 +2,9 @@
 
 pkgs.mkShell {
   packages = [
+    pkgs.git
     pkgs.python313
+    pkgs.direnv
 
     pkgs.uv
     pkgs.ruff
@@ -11,4 +13,7 @@ pkgs.mkShell {
 
     pkgs.btrfs-progs
   ];
+  shellHook = ''
+    eval "$(direnv hook $SHELL)"
+  '';
 }
