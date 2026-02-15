@@ -80,11 +80,12 @@ def upload_snapshot(
                 logger.error("Failed to send snapshot %s to temporary file.", snapshot)
                 return False
 
-            dest_snapshot = dest_logic_dir / snapshot.name
-            if not btrfs_receive(dest_snapshot, temp_file):
+            temp_file.seek(0)
+
+            if not btrfs_receive(dest_logic_dir, temp_file):
                 logger.error(
                     "Failed to receive snapshot from temporary file to %s.",
-                    dest_snapshot,
+                    dest_logic_dir,
                 )
                 return False
 
