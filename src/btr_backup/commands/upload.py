@@ -1,10 +1,16 @@
 from contextlib import ExitStack
+from operator import attrgetter
 from pathlib import Path
 from subprocess import DEVNULL, run
 from tempfile import TemporaryDirectory, TemporaryFile
 from typing import IO, Any
 
-from btr_backup.common import block_device, mount_context, snapshots
+from btr_backup.common import (
+    block_device,
+    include_exclude,
+    mount_context,
+    snapshots_for,
+)
 from btr_backup.log import logger
 from btr_backup.protocols import Subparsers
 
@@ -28,7 +34,7 @@ def btrfs_receive(path: Path, stdin: IO[bytes]) -> bool:
 
 
 def last_snapshot(dir: Path) -> Path | None:
-    subvols = snapshots(dir)
+    subvols = snapshots_for(dir)
     return dir / subvols[0] if subvols else None
 
 
@@ -43,10 +49,10 @@ def upload_logical_directory(source: Path, destination: Path) -> bool:
     destination.mkdir(exist_ok=True)
 
     parent = last_snapshot(destination)
-    if parent and parent.stem == snapshot.stem:
+    if parent and parent.name == snapshot.name:
         logger.warning(
             "Snapshot %s already exists in destination, skipping.",
-            snapshot.stem,
+            snapshot.name,
         )
         return True
 
@@ -71,9 +77,10 @@ def upload_logical_directory(source: Path, destination: Path) -> bool:
 
 
 def upload_snapshot(
-    working_dir: Path,
+    workdir: Path,
     *,
-    logical_dir: str,
+    include: list[str],
+    exclude: list[str],
     dest_dev: Path,
     dest_chdir: Path,
     **kwargs: Any,
@@ -95,17 +102,24 @@ def upload_snapshot(
             )
             return False
 
-        dest_working_dir = mount_point / dest_chdir
-        if not dest_working_dir.exists():
+        dest_workdir = mount_point / dest_chdir
+        if not dest_workdir.exists():
             logger.error(
                 "Destination working directory %s does not exist.",
-                dest_working_dir,
+                dest_workdir,
             )
             return False
 
+        directories = include_exclude(
+            workdir.iterdir(),
+            include,
+            exclude,
+            attrgetter("name"),
+        )
+
         return all(
-            upload_logical_directory(logic_dir, dest_working_dir / logic_dir.stem)
-            for logic_dir in working_dir.glob(logical_dir)
+            upload_logical_directory(directory, dest_workdir / directory.name)
+            for directory in directories
         )
 
 
@@ -115,13 +129,6 @@ def add_command(subparsers: Subparsers) -> None:
         help="Copy snapshots from one btrfs filesystem to another.",
     )
 
-    parser.add_argument(
-        "logical_dir",
-        type=str,
-        nargs="?",
-        default="*",
-        help="Logical directory to copy.",
-    )
     parser.add_argument(
         "--dest-dev",
         type=block_device,
@@ -134,4 +141,21 @@ def add_command(subparsers: Subparsers) -> None:
         default=Path(),
         help="Directory on destination block device with directory structure.",
     )
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument(
+        "--include",
+        "-i",
+        type=str,
+        action="append",
+        help="Include only specified subvolumes.",
+    )
+    group.add_argument(
+        "--exclude",
+        "-e",
+        type=str,
+        action="append",
+        help="Include only subvolumes that were not specified.",
+    )
+
     parser.set_defaults(func=upload_snapshot)

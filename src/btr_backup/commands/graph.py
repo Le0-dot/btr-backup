@@ -1,8 +1,10 @@
 from collections.abc import Iterator
 from enum import StrEnum
+from operator import attrgetter
 from pathlib import Path
 from typing import Any, Callable
 
+from btr_backup.common import include_exclude
 from btr_backup.log import logger
 from btr_backup.protocols import Subparsers
 
@@ -106,19 +108,30 @@ def generate_graph(logical_dirs: dict[str, list[str]]) -> Iterator[str]:
     yield from generate_with_last(items, generator, last_generator)
 
 
-def graph_subvolumes(working_dir: Path, **kwargs: Any) -> bool:
-    logger.debug(f"Graphing subvolumes in {working_dir}")
+def graph_subvolumes(
+    workdir: Path,
+    *,
+    include: list[str],
+    exclude: list[str],
+    **kwargs: Any,
+) -> bool:
+    logger.debug(f"Graphing subvolumes in {workdir}")
 
-    logical_volumes: dict[str, list[str]] = {}
-    for logic_dir in working_dir.iterdir():
-        logger.debug(f"Found logical directory: {logic_dir}")
+    directories = include_exclude(
+        workdir.iterdir(),
+        include,
+        exclude,
+        attrgetter("name"),
+    )
+    logger.debug(f"Found subvolume directories: {', '.join(map(str, directories))}")
 
-        subvolumes = [subvol.name for subvol in logic_dir.iterdir()]
-        logger.debug(f"Found subvolumes: {', '.join(subvolumes)}")
+    structure = {
+        subvol_dir.name: sorted(subvol.name for subvol in subvol_dir.iterdir())
+        for subvol_dir in directories
+    }
+    logger.debug(f"Subvolume structure: {structure}")
 
-        logical_volumes[logic_dir.name] = sorted(subvolumes, reverse=True)
-
-    print("".join(generate_graph(logical_volumes)))
+    print("".join(generate_graph(structure)))
 
     return True
 
@@ -128,4 +141,22 @@ def add_command(subparsers: Subparsers) -> None:
         "graph",
         help="Graph available subvolumes.",
     )
+
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument(
+        "--include",
+        "-i",
+        type=str,
+        action="append",
+        help="Include only specified subvolumes.",
+    )
+    group.add_argument(
+        "--exclude",
+        "-e",
+        type=str,
+        action="append",
+        help="Include only subvolumes that were not specified.",
+    )
+
     parser.set_defaults(func=graph_subvolumes)

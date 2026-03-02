@@ -1,5 +1,6 @@
 from os import fspath
 from pathlib import Path
+from tempfile import mkdtemp
 from typing import Any
 
 from btrfsutil import create_subvolume, subvolume_id
@@ -10,49 +11,54 @@ from btr_backup.protocols import Subparsers
 
 
 def init(
-    working_dir: Path,
+    workdir: Path,
     *,
     dev: Path,
-    logical_dir: str,
-    mount_path: Path | None,
+    dir: str,
+    mount_dir: Path | str | None,
     **kwargs: Any,
 ) -> bool:
-    logger.debug("Initializing logical directory %s in %s", logical_dir, working_dir)
+    logger.debug("Initializing logical directory %s in %s", dir, workdir)
 
-    logical_dir_path = working_dir / logical_dir
+    directory_path = workdir / dir
 
-    if logical_dir_path.exists():
+    if directory_path.exists():
         logger.error("Logical directory already exists.")
         return False
 
-    logical_dir_path.mkdir()
+    directory_path.mkdir()
 
-    active_subvolume_path = logical_dir_path / "active"
+    active_subvolume_path = directory_path / "active"
     create_subvolume(active_subvolume_path)
 
-    logger.info("Logical directory %s initialized successfully.", logical_dir_path)
+    logger.info("Logical directory %s initialized successfully.", directory_path)
 
-    if not mount_path:
+    if not mount_dir:
         return True
 
-    logger.debug("Mounting logical directory %s", logical_dir_path)
+    logger.debug("Mounting logical directory %s", directory_path)
 
-    if not mount_path.exists():
-        logger.debug("Mount path %s does not exist, creating it.", mount_path)
-        mount_path.mkdir()
+    if isinstance(mount_dir, str):
+        mount_dir = Path(mkdtemp(prefix="btr-backup-"))
+
+    mount_dir.mkdir(exist_ok=True, parents=True)
 
     subvolid = subvolume_id(active_subvolume_path)
-    logger.debug("Subvolume ID for %s is %d", logical_dir_path, subvolid)
+    logger.debug("Subvolume ID for %s is %d", directory_path, subvolid)
 
     try:
-        mount(fspath(dev), fspath(mount_path), "btrfs", data=f"subvolid={subvolid}")
+        mount(fspath(dev), fspath(mount_dir), "btrfs", data=f"subvolid={subvolid}")
     except OSError as e:
         logger.error("Failed to mount logical directory: %s", e)
         return False
 
     logger.info(
-        "Logical directory %s mounted successfully at %s.", logical_dir_path, mount_path
+        "Logical directory %s mounted successfully at %s.",
+        directory_path,
+        mount_dir,
     )
+
+    print(mount_dir)
 
     return True
 
@@ -64,13 +70,16 @@ def add_command(subparsers: Subparsers) -> None:
     )
 
     parser.add_argument(
-        "logical_dir",
+        "dir",
         type=str,
-        help="Logical directory to create.",
+        help="Directory for subvolume and snapshots to create.",
     )
     parser.add_argument(
-        "--mount-path",
+        "--mount-dir",
+        "-m",
         type=Path,
+        nargs="?",
+        const="auto",
         help="Mount the logical directory after initialization.",
     )
 

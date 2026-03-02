@@ -1,10 +1,12 @@
 from datetime import datetime
 from itertools import filterfalse
+from operator import attrgetter
 from pathlib import Path
 from typing import Any
 
 from btrfsutil import is_subvolume
 
+from btr_backup.common import include_exclude
 from btr_backup.log import logger
 from btr_backup.protocols import Subparsers
 
@@ -23,33 +25,45 @@ def check_subvolume_name(subvolume: Path) -> bool:
     )
 
 
-def check_structure(working_dir: Path, **kwargs: Any) -> bool:
-    logger.debug(f"Verifying {working_dir} existence")
-    if not working_dir.exists():
-        logger.error(f"Path {working_dir} does not exist.")
+def check_structure(
+    workdir: Path,
+    *,
+    include: list[str],
+    exclude: list[str],
+    **kwargs: Any,
+) -> bool:
+    logger.debug(f"Verifying {workdir} existence")
+    if not workdir.exists():
+        logger.error(f"Path {workdir} does not exist.")
         return False
 
-    logger.debug(f"Verifying {working_dir} is a directory")
-    if not working_dir.is_dir():
-        logger.error(f"Path {working_dir} is not a directory.")
+    logger.debug(f"Verifying {workdir} is a directory")
+    if not workdir.is_dir():
+        logger.error(f"Path {workdir} is not a directory.")
         return False
 
-    for logic_dir in working_dir.iterdir():
-        logger.debug(f"Verifying {logic_dir} is a directory")
-        if not logic_dir.is_dir():
-            logger.error(f"Path {logic_dir} is not a directory.")
+    directories = include_exclude(
+        workdir.iterdir(),
+        include,
+        exclude,
+        attrgetter("name"),
+    )
+    for directory in directories:
+        logger.debug(f"Verifying {directory} is a directory")
+        if not directory.is_dir():
+            logger.error(f"Path {directory} is not a directory.")
             return False
 
-        logger.debug(f"Verifying contents of {logic_dir} are subvolumes")
-        if extra := list(filterfalse(is_subvolume, logic_dir.iterdir())):
+        logger.debug(f"Verifying contents of {directory} are subvolumes")
+        if extra := list(filterfalse(is_subvolume, directory.iterdir())):
             extra_str = ", ".join(str(p) for p in extra)
-            logger.error(f"Only subvolumes allowed in {logic_dir}: {extra_str}")
+            logger.error(f"Only subvolumes allowed in {directory}: {extra_str}")
             return False
 
-        logger.debug(f"Verifying contents of {logic_dir} are named correctly")
-        if invalid := list(filterfalse(check_subvolume_name, logic_dir.iterdir())):
+        logger.debug(f"Verifying contents of {directory} are named correctly")
+        if invalid := list(filterfalse(check_subvolume_name, directory.iterdir())):
             invalid_str = ", ".join(str(p) for p in invalid)
-            logger.error(f"Invalid subvolume names in {logic_dir}: {invalid_str}")
+            logger.error(f"Invalid subvolume names in {directory}: {invalid_str}")
             return False
 
     return True
@@ -60,4 +74,22 @@ def add_command(subparsers: Subparsers) -> None:
         "check",
         help="Check subvolumes structure.",
     )
+
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument(
+        "--include",
+        "-i",
+        type=str,
+        action="append",
+        help="Include only specified subvolumes.",
+    )
+    group.add_argument(
+        "--exclude",
+        "-e",
+        type=str,
+        action="append",
+        help="Include only subvolumes that were not specified.",
+    )
+
     parser.set_defaults(func=check_structure)

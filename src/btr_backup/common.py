@@ -1,5 +1,5 @@
 from argparse import ArgumentTypeError
-from collections.abc import Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager, suppress
 from os import PathLike, fspath
 from pathlib import Path
@@ -29,7 +29,25 @@ def mount_context(device: PathLike, destination: PathLike, fs: str) -> Iterator[
             umount(fspath(destination))
 
 
-def snapshots(dir: Path) -> list[str]:
+def include_exclude[T, U](
+    values: Iterable[T],
+    include: list[U],
+    exclude: list[U],
+    mapper: Callable[[T], U] = lambda x: x,
+) -> Iterable[T]:
+    if include and exclude:
+        raise ValueError("Cannot specify both include and exclude.")
+
+    if include:
+        return (value for value in values if mapper(value) in include)
+
+    if exclude:
+        return (value for value in values if mapper(value) not in exclude)
+
+    return values
+
+
+def snapshots_for(dir: Path) -> list[str]:
     return sorted(
         [snapshot.name for snapshot in dir.iterdir() if snapshot.name != "active"],
         reverse=True,

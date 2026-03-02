@@ -1,22 +1,30 @@
 from datetime import datetime
+from operator import attrgetter
 from pathlib import Path
 from typing import Any
 
 from btrfsutil import create_snapshot, is_subvolume
 
+from btr_backup.common import include_exclude
 from btr_backup.log import logger
 from btr_backup.protocols import Subparsers
 
 
 def snapshot_subvolumes(
-    working_dir: Path,
+    workdir: Path,
     *,
-    logical_dir: str,
+    include: list[str],
+    exclude: list[str],
     **kwargs: Any,
 ) -> bool:
-    logger.debug("Listing subvolumes in %s", working_dir)
+    logger.debug("Listing subvolumes in %s", workdir)
 
-    direcotries = list(working_dir.glob(logical_dir))
+    direcotries = include_exclude(
+        workdir.iterdir(),
+        include,
+        exclude,
+        attrgetter("name"),
+    )
 
     if not direcotries:
         logger.error("No specified directories found.")
@@ -36,9 +44,9 @@ def snapshot_subvolumes(
         logger.error("Some snapshots already exist.")
         return False
 
-    for src, dst in zip(active, snapshots):
-        logger.debug("Creating snapshot from %s to %s", src, dst)
-        create_snapshot(src, dst, read_only=True)
+    for source, destination in zip(active, snapshots):
+        logger.debug("Creating snapshot %s from %s", destination, source)
+        create_snapshot(source, destination, read_only=True)
 
     return True
 
@@ -49,12 +57,21 @@ def add_command(subparsers: Subparsers) -> None:
         help="Snapshot selected subvolumes.",
     )
 
-    parser.add_argument(
-        "logical_dir",
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument(
+        "--include",
+        "-i",
         type=str,
-        nargs="?",
-        default="*",
-        help="Logical directory to snapshot subvolumes from.",
+        action="append",
+        help="Include only specified subvolumes.",
+    )
+    group.add_argument(
+        "--exclude",
+        "-e",
+        type=str,
+        action="append",
+        help="Include only subvolumes that were not specified.",
     )
 
     parser.set_defaults(func=snapshot_subvolumes)
