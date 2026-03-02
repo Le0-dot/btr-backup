@@ -1,0 +1,33 @@
+version = 1
+revision = 3
+requires-python = "==3.13.*"
+
+[[package]]
+name = "btr-backup"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "btrfsutil" },
+    { name = "mount" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "btrfsutil", specifier = ">=6.17.1" },
+    { name = "mount", specifier = ">=1.0.0" },
+]
+
+[[package]]
+name = "btrfsutil"
+version = "6.17.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/a4/d87535f04e111d2e79189c82db908f56ed97274ab210664f386f22278555/btrfsutil-6.17.1.tar.gz", hash = "sha256:aaa5d664fcdcaca12d9a94a44e9756ce3b9b534514b22e38052cf8d6aa1190fe", size = 19928, upload-time = "2025-11-07T10:45:09.467Z" }
+
+[[package]]
+name = "mount"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/1d/573e15d724b3a8dedec8ef07d48df03c0283a903c4bfcb18e2e42c0b53c3/mount-1.0.0.tar.gz", hash = "sha256:4510eaf4282a9634ace9982705da7c70857d1b09f73f589118f5a0c648e71ece", size = 5315, upload-time = "2023-04-14T21:35:47.119Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/52/1b/b0c4b0ebb3a8f0673b3596befd820836a2529f8495d5fa99455708782c6b/mount-1.0.0-py3-none-any.whl", hash = "sha256:ed87c97be0e49afc04f7e973fc7dfb23155f7865eaac312db4b47bc1fada9f39", size = 6110, upload-time = "2023-04-14T21:35:45.312Z" },
+]
