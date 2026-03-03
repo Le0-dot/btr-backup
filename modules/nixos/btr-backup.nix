@@ -1,6 +1,5 @@
 {
   lib,
-  pkgs,
   config,
   perSystem,
   ...
@@ -26,7 +25,7 @@ let
         serviceConfig.Type = "oneshot";
         after = [ "local-fs.target" ];
         requires = [ "local-fs.target" ];
-        path = [ perSystem.self.btr-backup ];
+        path = [ cfg.package ];
         script = ''
           btr-backup --dev ${device} ${mkOptFlag "--chdir" chdir} check ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
           btr-backup --dev ${device} ${mkOptFlag "--chdir" chdir} snapshot ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
@@ -50,7 +49,7 @@ let
         serviceConfig.Type = "oneshot";
         after = [ "local-fs.target" ];
         requires = [ "local-fs.target" ];
-        path = [ perSystem.self.btr-backup ];
+        path = [ cfg.package ];
         script = ''
           btr-backup --dev ${device} ${mkOptFlag "--chdir" chdir} check ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
           btr-backup --dev ${destinationDevice} ${mkOptFlag "--chdir" destinationChdir} check
@@ -74,17 +73,17 @@ let
         serviceConfig.Type = "oneshot";
         after = [ "local-fs.target" ];
         requires = [ "local-fs.target" ];
-        path = [ perSystem.self.btr-backup ];
+        path = [ cfg.package ];
         script = ''
           btr-backup --dev ${device} ${mkOptFlag "--chdir" chdir} check ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
-          btr-backup --dev ${device} ${mkOptFlag "--chdir" chdir} remove ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude} --keep-latest ${keepLatest}
+          btr-backup --dev ${device} ${mkOptFlag "--chdir" chdir} remove ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude} --keep-latest ${toString keepLatest}
         '';
       };
     };
 
   mkServices =
-    { name, instanceCfg }:
-    lib.mkIf instanceCfg.snapshot.enable (mkSnapshotService ({
+    name: instanceCfg:
+    lib.optionalAttrs instanceCfg.snapshot.enable (mkSnapshotService {
       inherit name;
       inherit (instanceCfg)
         device
@@ -92,8 +91,8 @@ let
         include
         exclude
         ;
-    }))
-    // lib.mkIf instanceCfg.upload.enable (mkUploadService ({
+    })
+    // lib.optionalAttrs instanceCfg.upload.enable (mkUploadService {
       inherit name;
       inherit (instanceCfg)
         device
@@ -102,8 +101,8 @@ let
         exclude
         ;
       inherit (instanceCfg.upload) destinationDevice destinationChdir;
-    }))
-    // lib.mkIf instanceCfg.remove.enable (mkRemoveService ({
+    })
+    // lib.optionalAttrs instanceCfg.remove.enable (mkRemoveService {
       inherit name;
       inherit (instanceCfg)
         device
@@ -112,39 +111,17 @@ let
         exclude
         ;
       inherit (instanceCfg.remove) keepLatest;
-    }));
+    });
 
-  mkSnapshotTimer =
-    { name, onCalendar }:
+  mkTimer =
     {
-      "${name}-snapshot" = {
-        description = "btr-backup ${name}: snapshot timer";
-        wantedBy = [ "timers.target" ];
-        timerConfig = {
-          OnCalendar = onCalendar;
-          Persistent = true;
-        };
-      };
-    };
-
-  mkUploadTimer =
-    { name, onCalendar }:
+      name,
+      type,
+      onCalendar,
+    }:
     {
-      "${name}-upload" = {
-        description = "btr-backup ${name}: upload timer";
-        wantedBy = [ "timers.target" ];
-        timerConfig = {
-          OnCalendar = onCalendar;
-          Persistent = true;
-        };
-      };
-    };
-
-  mkRemoveTimer =
-    { name, onCalendar }:
-    {
-      "${name}-snapshot" = {
-        description = "btr-backup ${name}: remove timer";
+      "${name}-${type}" = {
+        description = "btr-backup ${name}: ${type} timer";
         wantedBy = [ "timers.target" ];
         timerConfig = {
           OnCalendar = onCalendar;
@@ -154,23 +131,33 @@ let
     };
 
   mkTimers =
-    { name, instanceCfg }:
-    lib.mkIf instanceCfg.snapshot.enable (mkSnapshotTimer ({
+    name: instanceCfg:
+    lib.optionalAttrs instanceCfg.snapshot.enable (mkTimer {
       inherit name;
       inherit (instanceCfg.snapshot) onCalendar;
-    }))
-    // lib.mkIf instanceCfg.upload.enable (mkUploadTimer ({
+      type = "snapshot";
+    })
+    // lib.optionalAttrs instanceCfg.upload.enable (mkTimer {
       inherit name;
       inherit (instanceCfg.upload) onCalendar;
-    }))
-    // lib.mkIf instanceCfg.remove.enable (mkRemoveTimer ({
+      type = "upload";
+    })
+    // lib.optionalAttrs instanceCfg.remove.enable (mkTimer {
       inherit name;
       inherit (instanceCfg.remove) onCalendar;
-    }));
+      type = "remove";
+    });
 in
 {
   options.services.btr-backup = {
     enable = lib.mkEnableOption "btr-backup service";
+
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = perSystem.self.default;
+      description = "The btr-backup package to use.";
+    };
+
     config = lib.mkOption {
       type = lib.types.attrsOf (
         lib.types.submodule {
@@ -183,7 +170,7 @@ in
               example = "/dev/sda1";
             };
 
-            directory = lib.mkOption {
+            chdir = lib.mkOption {
               type = lib.types.nullOr lib.types.str;
               default = null;
               description = ''
@@ -275,7 +262,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    environment.systemPackages = [ pkgs.btr-backup ];
+    environment.systemPackages = [ cfg.package ];
 
     systemd.services = lib.mkMerge (lib.attrsets.mapAttrsToList mkServices cfg.config);
     systemd.timers = lib.mkMerge (lib.attrsets.mapAttrsToList mkTimers cfg.config);
