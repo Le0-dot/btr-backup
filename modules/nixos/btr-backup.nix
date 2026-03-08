@@ -50,7 +50,10 @@ let
         serviceConfig.Type = "oneshot";
         after = [ "local-fs.target" ];
         requires = [ "local-fs.target" ];
-        path = [ cfg.package ];
+        path = [
+          cfg.package
+          pkgs.btrfs-progs
+        ];
         script = ''
           btr-backup -vv --dev ${device} ${mkOptFlag "--chdir" chdir} check ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
           btr-backup -vv --dev ${destinationDevice} ${mkOptFlag "--chdir" destinationChdir} check
