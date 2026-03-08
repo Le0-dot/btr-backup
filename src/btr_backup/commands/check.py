@@ -32,12 +32,12 @@ def check_structure(
     exclude: list[str],
     **kwargs: Any,
 ) -> bool:
-    logger.debug(f"Verifying {workdir} existence")
+    logger.info(f"Verifying {workdir.name} existence")
     if not workdir.exists():
         logger.error(f"Path {workdir} does not exist.")
         return False
 
-    logger.debug(f"Verifying {workdir} is a directory")
+    logger.info(f"Verifying {workdir.name} is a directory")
     if not workdir.is_dir():
         logger.error(f"Path {workdir} is not a directory.")
         return False
@@ -49,22 +49,24 @@ def check_structure(
         attrgetter("name"),
     )
     for directory in directories:
-        logger.debug(f"Verifying {directory} is a directory")
+        logger.info(f"Verifying {directory} is a directory")
         if not directory.is_dir():
             logger.error(f"Path {directory} is not a directory.")
             return False
 
-        logger.debug(f"Verifying contents of {directory} are subvolumes")
+        logger.info(f"Verifying contents of {directory} are subvolumes")
         if extra := list(filterfalse(is_subvolume, directory.iterdir())):
             extra_str = ", ".join(str(p) for p in extra)
             logger.error(f"Only subvolumes allowed in {directory}: {extra_str}")
             return False
 
-        logger.debug(f"Verifying contents of {directory} are named correctly")
+        logger.info(f"Verifying contents of {directory} are named correctly")
         if invalid := list(filterfalse(check_subvolume_name, directory.iterdir())):
             invalid_str = ", ".join(str(p) for p in invalid)
             logger.error(f"Invalid subvolume names in {directory}: {invalid_str}")
             return False
+
+    logger.info("Structure is valid.")
 
     return True
 

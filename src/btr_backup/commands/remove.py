@@ -41,7 +41,7 @@ def remove_subvolumes(
     )
 
     for snapshot in chain.from_iterable(to_remove):
-        logger.debug("%s will be removed", snapshot.relative_to(workdir))
+        logger.info("%s will be removed", snapshot.relative_to(workdir))
 
         if not dry_run:
             delete_subvolume(snapshot)

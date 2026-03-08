@@ -39,7 +39,7 @@ def last_snapshot(dir: Path) -> Path | None:
 
 
 def upload_snapshot(source: Path, destination: Path) -> bool:
-    logger.debug("Processing logical directory: %s", source)
+    logger.debug("Processing subvolume directory: %s", source)
 
     snapshot = last_snapshot(source)
     if not snapshot:
@@ -61,7 +61,11 @@ def upload_snapshot(source: Path, destination: Path) -> bool:
         parent = snapshot.with_name(destination_snapshot.name)
 
     with TemporaryFile(prefix="btr-backup-") as buffer:
-        logger.debug("Uploading snapshot %s, parent snapshot %s", snapshot, parent)
+        logger.info(
+            "Uploading snapshot %s, parent snapshot %s",
+            snapshot.relative_to(source.parent),
+            parent.relative_to(source.parent) if parent else "None",
+        )
         if not btrfs_send(snapshot, parent, buffer):
             logger.error(
                 "Failed to send snapshot %s to temporary file.",

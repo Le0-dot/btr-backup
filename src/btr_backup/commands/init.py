@@ -18,7 +18,7 @@ def init(
     mount_dir: Path | str | None,
     **kwargs: Any,
 ) -> bool:
-    logger.debug("Initializing logical directory %s in %s", dir, workdir)
+    logger.debug("Initializing subvolume directory %s in %s", dir, workdir)
 
     directory_path = workdir / dir
 
@@ -52,11 +52,7 @@ def init(
         logger.error("Failed to mount logical directory: %s", e)
         return False
 
-    logger.info(
-        "Logical directory %s mounted successfully at %s.",
-        directory_path,
-        mount_dir,
-    )
+    logger.info("Logical directory %s mounted successfully at %s.", dir, mount_dir)
 
     print(mount_dir)
 

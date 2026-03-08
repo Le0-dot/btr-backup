@@ -28,8 +28,8 @@ let
         requires = [ "local-fs.target" ];
         path = [ cfg.package ];
         script = ''
-          btr-backup -vv --dev ${device} ${mkOptFlag "--chdir" chdir} check ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
-          btr-backup -vv --dev ${device} ${mkOptFlag "--chdir" chdir} snapshot ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
+          btr-backup -v --dev ${device} ${mkOptFlag "--chdir" chdir} check ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
+          btr-backup -v --dev ${device} ${mkOptFlag "--chdir" chdir} snapshot ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
         '';
       };
     };
@@ -55,9 +55,9 @@ let
           pkgs.btrfs-progs
         ];
         script = ''
-          btr-backup -vv --dev ${device} ${mkOptFlag "--chdir" chdir} check ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
-          btr-backup -vv --dev ${destinationDevice} ${mkOptFlag "--chdir" destinationChdir} check
-          btr-backup -vv --dev ${device} ${mkOptFlag "--chdir" chdir} upload ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude} --dest-dev ${destinationDevice} ${mkOptFlag "--dest-chdir" destinationChdir}
+          btr-backup -v --dev ${device} ${mkOptFlag "--chdir" chdir} check ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
+          btr-backup -v --dev ${destinationDevice} ${mkOptFlag "--chdir" destinationChdir} check
+          btr-backup -v --dev ${device} ${mkOptFlag "--chdir" chdir} upload ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude} --dest-dev ${destinationDevice} ${mkOptFlag "--dest-chdir" destinationChdir}
         '';
       };
     };
@@ -79,8 +79,8 @@ let
         requires = [ "local-fs.target" ];
         path = [ cfg.package ];
         script = ''
-          btr-backup -vv --dev ${device} ${mkOptFlag "--chdir" chdir} check ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
-          btr-backup -vv --dev ${device} ${mkOptFlag "--chdir" chdir} remove ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude} --keep-latest ${toString keepLatest}
+          btr-backup -v --dev ${device} ${mkOptFlag "--chdir" chdir} check ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude}
+          btr-backup -v --dev ${device} ${mkOptFlag "--chdir" chdir} remove ${mkListFlag "--include" include} ${mkListFlag "--exclude" exclude} --keep-latest ${toString keepLatest}
         '';
       };
     };

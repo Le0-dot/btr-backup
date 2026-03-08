@@ -17,7 +17,7 @@ def snapshot_subvolumes(
     exclude: list[str],
     **kwargs: Any,
 ) -> bool:
-    logger.debug("Listing subvolumes in %s", workdir)
+    logger.debug("Creating snapshots for subvolumes in %s", workdir)
 
     direcotries = include_exclude(
         workdir.iterdir(),
@@ -45,7 +45,11 @@ def snapshot_subvolumes(
         return False
 
     for source, destination in zip(active, snapshots):
-        logger.debug("Creating snapshot %s from %s", destination, source)
+        logger.info(
+            "Creating snapshot %s from %s",
+            destination.relative_to(workdir),
+            source.relative_to(workdir),
+        )
         create_snapshot(source, destination, read_only=True)
 
     return True
