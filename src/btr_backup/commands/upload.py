@@ -48,13 +48,17 @@ def upload_snapshot(source: Path, destination: Path) -> bool:
 
     destination.mkdir(exist_ok=True)
 
-    parent = last_snapshot(destination)
-    if parent and parent.name == snapshot.name:
+    destination_snapshot = last_snapshot(destination)
+    if destination_snapshot and destination_snapshot.name == snapshot.name:
         logger.warning(
             "Snapshot %s already exists in destination, skipping.",
             snapshot.name,
         )
         return True
+
+    parent = None
+    if destination_snapshot:
+        parent = snapshot.with_name(destination_snapshot.name)
 
     with TemporaryFile(prefix="btr-backup-") as buffer:
         logger.debug("Uploading snapshot %s, parent snapshot %s", snapshot, parent)
