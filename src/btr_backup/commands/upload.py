@@ -38,7 +38,7 @@ def last_snapshot(dir: Path) -> Path | None:
     return dir / subvols[0] if subvols else None
 
 
-def upload_logical_directory(source: Path, destination: Path) -> bool:
+def upload_snapshot(source: Path, destination: Path) -> bool:
     logger.debug("Processing logical directory: %s", source)
 
     snapshot = last_snapshot(source)
@@ -57,6 +57,7 @@ def upload_logical_directory(source: Path, destination: Path) -> bool:
         return True
 
     with TemporaryFile(prefix="btr-backup-") as buffer:
+        logger.debug("Uploading snapshot %s, parent snapshot %s", snapshot, parent)
         if not btrfs_send(snapshot, parent, buffer):
             logger.error(
                 "Failed to send snapshot %s to temporary file.",
@@ -76,7 +77,7 @@ def upload_logical_directory(source: Path, destination: Path) -> bool:
     return True
 
 
-def upload_snapshot(
+def upload_snapshots(
     workdir: Path,
     *,
     include: list[str],
@@ -118,7 +119,7 @@ def upload_snapshot(
         )
 
         return all(
-            upload_logical_directory(directory, dest_workdir / directory.name)
+            upload_snapshot(directory, dest_workdir / directory.name)
             for directory in directories
         )
 
@@ -158,4 +159,4 @@ def add_command(subparsers: Subparsers) -> None:
         help="Include only subvolumes that were not specified.",
     )
 
-    parser.set_defaults(func=upload_snapshot)
+    parser.set_defaults(func=upload_snapshots)
