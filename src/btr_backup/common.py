@@ -34,17 +34,17 @@ def include_exclude[T, U](
     include: list[U],
     exclude: list[U],
     mapper: Callable[[T], U] = lambda x: x,
-) -> Iterable[T]:
+) -> list[T]:
     if include and exclude:
         raise ValueError("Cannot specify both include and exclude.")
 
     if include:
-        return (value for value in values if mapper(value) in include)
+        return [value for value in values if mapper(value) in include]
 
     if exclude:
-        return (value for value in values if mapper(value) not in exclude)
+        return [value for value in values if mapper(value) not in exclude]
 
-    return values
+    return list(values)
 
 
 def snapshots_for(dir: Path) -> list[str]:
