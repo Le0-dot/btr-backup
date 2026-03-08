@@ -1,7 +1,8 @@
+{ flake, ... }:
 {
   lib,
   config,
-  perSystem,
+  pkgs,
   ...
 }:
 
@@ -154,7 +155,8 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = perSystem.self.default;
+      default = flake.packages.${pkgs.system}.default;
+      defaultText = lib.literalExpression "btr-backup.packages.\${pkgs.system}.default";
       description = "The btr-backup package to use.";
     };
 

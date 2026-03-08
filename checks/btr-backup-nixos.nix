@@ -15,7 +15,6 @@ pkgs.testers.nixosTest {
 
       services.btr-backup = {
         enable = true;
-        package = flake.packages.${pkgs.system}.default;
         config.myBackup = {
           enable = true;
 
