@@ -1,6 +1,6 @@
 { pkgs }:
 
-pkgs.python3Packages.buildPythonPackage rec {
+pkgs.python313Packages.buildPythonPackage rec {
   pname = "mount";
   version = "1.0.0";
   pyproject = true;
